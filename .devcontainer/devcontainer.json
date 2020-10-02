@@ -33,7 +33,14 @@
 
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
-		"ms-python.python"
+		"ms-python.python",
+		"michelemelluso.gitignore",
+		"ow.vscode-subword-navigation",
+		"visualstudioexptteam.vscodeintellicode",
+		"eamodio.gitlens",
+		"github.vscode-pull-request-github",
+		"donjayamanne.githistory",
+		"mhutchie.git-graph"
 	]
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
