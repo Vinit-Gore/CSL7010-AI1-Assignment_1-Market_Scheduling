@@ -6,10 +6,14 @@
         {
             "label": "Sync Notebooks",
             "type": "shell",
-            "command": "jupytext --sync **/*.*py*",
+            "command": "${workspaceFolder}/sync_notebooks.sh",
             "runOptions": {
                 "runOn": "folderOpen"
-            }
-        }
+            },
+            "options": {
+                "cwd": "/"
+            },
+            "problemMatcher": []
+        },
     ]
 }

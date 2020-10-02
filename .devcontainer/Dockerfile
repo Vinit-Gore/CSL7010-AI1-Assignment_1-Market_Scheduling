@@ -18,12 +18,12 @@ RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requ
 # [Optional] Uncomment this section to install additional OS packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
-    gnupg2 \
+    gnupg2
     # texlive-xetex texlive-fonts-recommended texlive-generic-recommended
 
 # [Optional] Uncomment this line to install global node packages.
 # RUN su vscode -c "source /usr/local/share/nvm/nvm.sh && npm install -g <your-package-here>" 2>&1
 
-# setup pre-commit and git gpg
-RUN pre-commit install
+# git gpg
+# RUN pre-commit install
 RUN git config --global gpg.program $(which gpg)

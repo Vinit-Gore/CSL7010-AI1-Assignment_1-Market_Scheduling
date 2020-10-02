@@ -16,6 +16,8 @@
 
 	// Setup container configs
 	"postStartCommand": "pre-commit install",
+	"workspaceFolder": "/workspace",
+	"workspaceMount": "type=bind,source=${localWorkspaceFolder},target=/workspace,consistency=cached",
 
 	// Set *default* container specific settings.json values on container create.
 	"settings": { 
