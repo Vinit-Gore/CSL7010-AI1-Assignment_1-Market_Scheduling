@@ -1,145 +1,152 @@
-# -*- coding: utf-8 -*-
-# ---
-# jupyter:
-#   jupytext:
-#     formats: ipynb,py:percent,md
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.6.0
-#   kernelspec:
-#     display_name: Python 3.7.9 64-bit
-#     metadata:
-#       interpreter:
-#         hash: 4cd7ab41f5fca4b9b44701077e38c5ffd31fe66a6cab21e0214b68d958d0e462
-#     name: Python 3.7.9 64-bit
-# ---
+---
+jupyter:
+  jupytext:
+    encoding: '# -*- coding: utf-8 -*-'
+    formats: ipynb,py:percent,md
+    main_language: python
+    text_representation:
+      extension: .md
+      format_name: markdown
+      format_version: '1.2'
+      jupytext_version: 1.6.0
+  kernelspec:
+    display_name: Python 3.7.9 64-bit
+    metadata:
+      interpreter:
+        hash: 4cd7ab41f5fca4b9b44701077e38c5ffd31fe66a6cab21e0214b68d958d0e462
+    name: Python 3.7.9 64-bit
+---
 
-# %% [markdown] id="6GTphwF2xK9Z"
-# # ASSIGNMENT 1: AUTOMATED MARKET OPENING SCHEDULER DURING COVID
-#
-#
-# > Goal: The goal of this assignment is to take a complex new problem and formulate and solve it as search. Formulation as search is an integral skill of AI that will come in handy whenever you are faced with a new problem. Heuristic search will allow you to find optimal solutions. Local search may not find the optimal solution, but is usually able to find good solutions for really large problems.
-#
-#
-# ## Scenario: Optimization of Market Opening Schedule.
-# A city has **n** types of shops. 
-#
-# The government wants to create an opening schedule for the markets ensuring the safety of maximum people. Due to the current COVID situation the government wants the people to make minimum movement out of their houses. They have approached you to take your help in order to organize the opening of shops in a best possible schedule. You need to use the power of AI and write a generalized search algorithm to find the best possible schedule. 
-#
-# The city has **m** market places which can be opened parallely. In a market place during each time slot the government is planning to open **k** types of shops. And in a day there are a total of **T** time slots available. We can assume that `n = T.m.k`. 
-#
-# For example, in figure below `m = 2`, `T = 3` and `k = 4`
-#
-# ||||
-# |:-|:-|:-|
-# |Type: 1,2,3,4|Type: 5,6,7,8|Type: 9,10,11,12|
-# |Type: 13,14,15,16|Type: 17,18,19,20|Type: 21,22,23,24|
-#
-#
-# We first define the characteristics of a good schedule. For any good schedule people should make minimum movement and most of the people should feel no conflict about which market they should go for purchasing.
-#
-# That is: 
-# - All types of shops opening in one time slot in the same market should sell related items (items generally bought together).
-# - All types of shops opening in parallel markets should be as far away as possible to avoid people’s movement to all of the markets (selling items that are generally not bought together).
-#
-# To operationalize this intuition let us assume we are given a function representing the distance between two types/categories: **`d(t1, t2)`**, such that **d** is between 0 and 1. We can similarly define a similarity between two, **`s(t1, t2) = 1 - d(t1, t2)`**. 
-#
-# Now we can define the goodness of a schedule as follows:
-# - `Sum(similarities of all pairs within a single time slot in the same market) + C * Sum(distances of all pairs within a single time slot in the parallel market)`.
-#
-# In our example, the goodness will be computed as,
-#
-# > ```
-# > G(Schedule) = s(1,2) + s(1,3) + s(1,4) + s(2,3) + s(2,4) + s(3,4) + 
-# >               s(5,6) + s(5,7) + s(5,8) + s(6,7) + s(6,8) + s(7,8) +
-# >         ……. + s(13,14) + …. + s(21,22) + ….. + 
-# >    + C x [d(1,13) + d(1,14)… d(2,13) + d(2,14) + … + d(5,17) + d(5,18) + …]
-# > ```
-#
-# The constant **C** trades off the importance of semantic coherence of one market versus reducing conflict across parallel markets.
-#
-# **Your goal is to find a schedule with the maximum goodness.**
-#
+<!-- #region id="6GTphwF2xK9Z" -->
+# ASSIGNMENT 1: AUTOMATED MARKET OPENING SCHEDULER DURING COVID
 
-# %% [markdown] id="ma3vR73IzYW1"
-# Input:
-#
-# Line 1: **k**: total types of shops opening in one time slot in one market
-#
-# Line 2: **m**: number of parallel markets
-#
-# Line 3: **T**: number of time slots
-#
-# Line 4: **C**: trade-off constant
-#
-# Starting on the fifth line we have a space separated list of distances between a type of shop and rest others. Note that `d(x,y) = d(y,x)`. Also, all `d(x,x) = 0`.
-#
 
-# %% [markdown] id="V2QotcGQ3orC"
-# Important Instructions:
-# - You may work in teams of maximum three or by yourself. If you are short of partners, our recommendation is that this assignment is quite straightforward and a partner should not be required.
-# - You cannot use built-in libraries/implementations for search or scheduling algorithms.
-# - Please do not search the Web for solutions to the problem. Your submission will be checked for plagiarism with the codes available on Web as well as the codes submitted by other teams. Any team found guilty will be awarded a suitable penalty as per IIT rules.
-# - Your code will be automatically evaluated. You get a zero if your output is not automatically parsable.
-# - You are allowed to use any of the two programming languages: C++, Python.
-#
+> Goal: The goal of this assignment is to take a complex new problem and formulate and solve it as search. Formulation as search is an integral skill of AI that will come in handy whenever you are faced with a new problem. Heuristic search will allow you to find optimal solutions. Local search may not find the optimal solution, but is usually able to find good solutions for really large problems.
 
-# %% [markdown] id="WrItzjyw9Uhr"
-# ### Sample Input
-# ```
-# 2
-# 2
-# 1
-# 1
-# 0 0.4 0.8 1
-# 0.4 0 0.6 0.7
-# 0.8 0.6 0 0.3
-# 1 0.7 0.3 0
-# ```
-# ### Output
-# Your algorithm should return the max-goodness schedule.
-#
-# #### Output Format:
-# Space separated list of shop ids (i.e, shop’s type ids), where time slots are separated by bars and parallel markets are separated by line.
-# For the above problem the optimal solution is t1 and t2 in one market; and t3 and t4 in the other market. It will be represented as: 
-# ```
-# 1 2
-# 3 4
-# ```
-# Other equivalent ways to represent this same solution:
-# ```
-# 4 3
-# 2 1
-# ```
-# OR
-# ```
-# 2 1
-# 3 4
-# ```
-# etc. All are valid and have the total goodness of 4.4 (Verify).
-#
-# Another sample input is provided along with the assignment representing similar easy problems.
-#
-# We recommend you to experiment with other problems as well.
-#
 
-# %% [markdown] id="Urbyt-N2VxBU"
-# # Utility functions for colab notebook
+## Scenario: Optimization of Market Opening Schedule.
+A city has **n** types of shops. 
 
-# %% [markdown] id="nkr9sE4ZPPq6"
-# ## Ray for parallelism
-# Install and setup the Ray library.
-# https://github.com/ray-project/tutorial
+The government wants to create an opening schedule for the markets ensuring the safety of maximum people. Due to the current COVID situation the government wants the people to make minimum movement out of their houses. They have approached you to take your help in order to organize the opening of shops in a best possible schedule. You need to use the power of AI and write a generalized search algorithm to find the best possible schedule. 
 
-# %% executionInfo={"elapsed": 7806, "status": "ok", "timestamp": 1601111599799, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="2EjS5UJ7PEff" outputId="d27b62eb-b011-484d-9794-8cb40ba4b02d" tags=[]
+The city has **m** market places which can be opened parallely. In a market place during each time slot the government is planning to open **k** types of shops. And in a day there are a total of **T** time slots available. We can assume that `n = T.m.k`. 
+
+For example, in figure below `m = 2`, `T = 3` and `k = 4`
+
+||||
+|:-|:-|:-|
+|Type: 1,2,3,4|Type: 5,6,7,8|Type: 9,10,11,12|
+|Type: 13,14,15,16|Type: 17,18,19,20|Type: 21,22,23,24|
+
+
+We first define the characteristics of a good schedule. For any good schedule people should make minimum movement and most of the people should feel no conflict about which market they should go for purchasing.
+
+That is: 
+- All types of shops opening in one time slot in the same market should sell related items (items generally bought together).
+- All types of shops opening in parallel markets should be as far away as possible to avoid people’s movement to all of the markets (selling items that are generally not bought together).
+
+To operationalize this intuition let us assume we are given a function representing the distance between two types/categories: **`d(t1, t2)`**, such that **d** is between 0 and 1. We can similarly define a similarity between two, **`s(t1, t2) = 1 - d(t1, t2)`**. 
+
+Now we can define the goodness of a schedule as follows:
+- `Sum(similarities of all pairs within a single time slot in the same market) + C * Sum(distances of all pairs within a single time slot in the parallel market)`.
+
+In our example, the goodness will be computed as,
+
+> ```
+> G(Schedule) = s(1,2) + s(1,3) + s(1,4) + s(2,3) + s(2,4) + s(3,4) + 
+>               s(5,6) + s(5,7) + s(5,8) + s(6,7) + s(6,8) + s(7,8) +
+>         ……. + s(13,14) + …. + s(21,22) + ….. + 
+>    + C x [d(1,13) + d(1,14)… d(2,13) + d(2,14) + … + d(5,17) + d(5,18) + …]
+> ```
+
+The constant **C** trades off the importance of semantic coherence of one market versus reducing conflict across parallel markets.
+
+**Your goal is to find a schedule with the maximum goodness.**
+
+<!-- #endregion -->
+
+<!-- #region id="ma3vR73IzYW1" -->
+Input:
+
+Line 1: **k**: total types of shops opening in one time slot in one market
+
+Line 2: **m**: number of parallel markets
+
+Line 3: **T**: number of time slots
+
+Line 4: **C**: trade-off constant
+
+Starting on the fifth line we have a space separated list of distances between a type of shop and rest others. Note that `d(x,y) = d(y,x)`. Also, all `d(x,x) = 0`.
+
+<!-- #endregion -->
+
+<!-- #region id="V2QotcGQ3orC" -->
+Important Instructions:
+- You may work in teams of maximum three or by yourself. If you are short of partners, our recommendation is that this assignment is quite straightforward and a partner should not be required.
+- You cannot use built-in libraries/implementations for search or scheduling algorithms.
+- Please do not search the Web for solutions to the problem. Your submission will be checked for plagiarism with the codes available on Web as well as the codes submitted by other teams. Any team found guilty will be awarded a suitable penalty as per IIT rules.
+- Your code will be automatically evaluated. You get a zero if your output is not automatically parsable.
+- You are allowed to use any of the two programming languages: C++, Python.
+
+<!-- #endregion -->
+
+<!-- #region id="WrItzjyw9Uhr" -->
+### Sample Input
+```
+2
+2
+1
+1
+0 0.4 0.8 1
+0.4 0 0.6 0.7
+0.8 0.6 0 0.3
+1 0.7 0.3 0
+```
+### Output
+Your algorithm should return the max-goodness schedule.
+
+#### Output Format:
+Space separated list of shop ids (i.e, shop’s type ids), where time slots are separated by bars and parallel markets are separated by line.
+For the above problem the optimal solution is t1 and t2 in one market; and t3 and t4 in the other market. It will be represented as: 
+```
+1 2
+3 4
+```
+Other equivalent ways to represent this same solution:
+```
+4 3
+2 1
+```
+OR
+```
+2 1
+3 4
+```
+etc. All are valid and have the total goodness of 4.4 (Verify).
+
+Another sample input is provided along with the assignment representing similar easy problems.
+
+We recommend you to experiment with other problems as well.
+
+<!-- #endregion -->
+
+<!-- #region id="Urbyt-N2VxBU" -->
+# Utility functions for colab notebook
+<!-- #endregion -->
+
+<!-- #region id="nkr9sE4ZPPq6" -->
+## Ray for parallelism
+Install and setup the Ray library.
+https://github.com/ray-project/tutorial
+<!-- #endregion -->
+
+```python executionInfo={"elapsed": 7806, "status": "ok", "timestamp": 1601111599799, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="2EjS5UJ7PEff" outputId="d27b62eb-b011-484d-9794-8cb40ba4b02d" tags=[]
 # Install Ray for parallelism
 print('NOTE: Intentionally crashing session to use the newly installed library.\n')
 
-# # !pip uninstall -y pyarrow
-# !pip install ray
-# !pip install bs4
+# !pip uninstall -y pyarrow
+!pip install ray
+!pip install bs4
 
 try:
     import ray
@@ -147,18 +154,20 @@ except:
     # A hack to force the runtime to restart, needed to include the above dependencies.
     import os
     os._exit(0)
+```
 
 
-# %% [markdown] id="CfTtz2WuVoJG"
-# ## I/O Helper Functions
-#
-# ### set_input(inp_str)
-# This takes a string which will be used to read lines for the input function.
-#
-# ### input()
-# This is a proxy to use the given string instead of asking the user for input.
+<!-- #region id="CfTtz2WuVoJG" -->
+## I/O Helper Functions
 
-# %% executionInfo={"elapsed": 7751, "status": "ok", "timestamp": 1601111599802, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="CHFZ6tJ5S0WP"
+### set_input(inp_str)
+This takes a string which will be used to read lines for the input function.
+
+### input()
+This is a proxy to use the given string instead of asking the user for input.
+<!-- #endregion -->
+
+```python executionInfo={"elapsed": 7751, "status": "ok", "timestamp": 1601111599802, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="CHFZ6tJ5S0WP"
 # =======================================================
 #       Fake input function for colab notebook
 # =======================================================
@@ -175,17 +184,18 @@ def input() -> str:
     __fake_input_ctr += 1
     return __input[__fake_input_ctr]
 # =======================================================
+```
 
+<!-- #region id="WT_hoHZyWUi-" -->
+## Test cases
+These are test cases used to test the program.
 
-# %% [markdown] id="WT_hoHZyWUi-"
-# ## Test cases
-# These are test cases used to test the program.
-#
-# A test case is just an input string.
-#
-# `TestCases` is a list of test cases.
+A test case is just an input string.
 
-# %% executionInfo={"elapsed": 7735, "status": "ok", "timestamp": 1601111599805, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="7iWIuLVgWaxO"
+`TestCases` is a list of test cases.
+<!-- #endregion -->
+
+```python executionInfo={"elapsed": 7735, "status": "ok", "timestamp": 1601111599805, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="7iWIuLVgWaxO"
 TestCases = [
                   """
                   2
@@ -216,9 +226,9 @@ TestCases = [
                   0.8 1.0 0.2 0.1 0.7 0.9 0.0 0.0 0.8 0.9 0.3 0
                   """,
 ]
+```
 
-
-# %% executionInfo={"elapsed": 7724, "status": "ok", "timestamp": 1601111599806, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="op_eHI3Axqas"
+```python executionInfo={"elapsed": 7724, "status": "ok", "timestamp": 1601111599806, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="op_eHI3Axqas"
 # Generate test cases
 def generate_test_case(K,M,T,C) -> str:
     N = K*M*T
@@ -232,17 +242,20 @@ def generate_test_case(K,M,T,C) -> str:
 
 # generate test case for N=100
 TestCases.append(generate_test_case(10,5,2,2.4))
+```
 
-# %% [markdown] id="lynaubXR1e_O"
-# # Typedefs and Data Structures
+<!-- #region id="lynaubXR1e_O" -->
+# Typedefs and Data Structures
+<!-- #endregion -->
 
-# %% [markdown] id="jwpRphtbTBqf"
-# ## Context
-# This stores the variables `K`, `M`, `T`, `C` and `N` as derived from the input.
-#
-# This DS is immutable, i.e. once created, data inside it cannot be changed.
+<!-- #region id="jwpRphtbTBqf" -->
+## Context
+This stores the variables `K`, `M`, `T`, `C` and `N` as derived from the input.
 
-# %% executionInfo={"elapsed": 7715, "status": "ok", "timestamp": 1601111599807, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="oAm4yZ7Q7cQI"
+This DS is immutable, i.e. once created, data inside it cannot be changed.
+<!-- #endregion -->
+
+```python executionInfo={"elapsed": 7715, "status": "ok", "timestamp": 1601111599807, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="oAm4yZ7Q7cQI"
 # Typings
 from dataclasses import dataclass, field
 # Context stores all the input data
@@ -257,15 +270,16 @@ class Context:
         # set immutable value of N
         # workaround https://stackoverflow.com/questions/53756788/how-to-set-the-value-of-dataclass-field-in-post-init-when-frozen-true
         object.__setattr__(self, 'N', self.K * self.T * self.M)
+```
 
+<!-- #region id="JEmb8TMNTaLC" -->
+## SymmetricMatrix
+A class to efficiently store symmetric matrices.
 
-# %% [markdown] id="JEmb8TMNTaLC"
-# ## SymmetricMatrix
-# A class to efficiently store symmetric matrices.
-#
-# `m[1,2]` = element at `row=1` and `col=2`.
+`m[1,2]` = element at `row=1` and `col=2`.
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 963, "status": "ok", "timestamp": 1601112486132, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="_7A0V0b8Trji"
+```python executionInfo={"elapsed": 963, "status": "ok", "timestamp": 1601112486132, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="_7A0V0b8Trji"
 # Typings
 from typing import Tuple
 # Distance matrix data structure
@@ -313,13 +327,14 @@ class SymmetricMatrix:
     # returns average of all values
     def average(self) -> float:
         return self.sum() / self.size**2
+```
 
+<!-- #region id="QQpF5DOj3Pc8" -->
+## Schedule
+A class that represents a schedule as a table with `T` rows and `m` columns with each cell containing `k` elements.
+<!-- #endregion -->
 
-# %% [markdown] id="QQpF5DOj3Pc8"
-# ## Schedule
-# A class that represents a schedule as a table with `T` rows and `m` columns with each cell containing `k` elements.
-
-# %%
+```python
 from typing import List, Callable, Tuple
 import random
 class Schedule:
@@ -567,15 +582,17 @@ class Schedule:
                 ) for m in range(self.context.M)
             ]
         )
+```
 
-# %% [markdown] id="mB6LJff2gzIZ"
-# # Utility functions
-# ## input_context()
-# Inputs data from the user and return a `Context` object.
-# ## input_distances(context)
-# Takes a `Context` object, then inputs the distance matrix from the user and returns the `SymmetricMatrix` object of the distance matrix.
+<!-- #region id="mB6LJff2gzIZ" -->
+# Utility functions
+## input_context()
+Inputs data from the user and return a `Context` object.
+## input_distances(context)
+Takes a `Context` object, then inputs the distance matrix from the user and returns the `SymmetricMatrix` object of the distance matrix.
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 8147, "status": "ok", "timestamp": 1601111600272, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="37hNO4nEhLk1"
+```python executionInfo={"elapsed": 8147, "status": "ok", "timestamp": 1601111600272, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="37hNO4nEhLk1"
 def input_context() -> Context:
     K, M, T = [int(x) for x in [input(),input(),input()]]
     C = float(input())
@@ -587,41 +604,49 @@ def input_distances(context: Context) -> SymmetricMatrix:
         for idx, dist in enumerate(input().split()):
             mat[i,idx] = float(dist)
     return mat
+```
 
+<!-- #region id="ofAx-KwY7S-7" -->
+# Testing
+<!-- #endregion -->
 
-# %% [markdown] id="ofAx-KwY7S-7"
-# # Testing
+<!-- #region id="PLIwWsMc7ne4" -->
+## TestCases
+<!-- #endregion -->
 
-# %% [markdown] id="PLIwWsMc7ne4"
-# ## TestCases
-
-# %% executionInfo={"elapsed": 8132, "status": "ok", "timestamp": 1601111600273, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="H0nvL5k87lX4" outputId="8c8bff93-9d24-4bc9-aa99-f0fda5477174" tags=["outputPrepend"]
+```python executionInfo={"elapsed": 8132, "status": "ok", "timestamp": 1601111600273, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="H0nvL5k87lX4" outputId="8c8bff93-9d24-4bc9-aa99-f0fda5477174" tags=["outputPrepend"]
 for t in range(len(TestCases)):
     print(f"\nTst Case {t}:-\n", TestCases[t])
+```
 
-# %% [markdown] id="p077XZYw7i7o"
-# ## Context
+<!-- #region id="p077XZYw7i7o" -->
+## Context
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 8116, "status": "ok", "timestamp": 1601111600274, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="rEBmWnCE7U8U" outputId="082e2106-34b0-4833-8cda-6eb78170d2b8" tags=[]
+```python executionInfo={"elapsed": 8116, "status": "ok", "timestamp": 1601111600274, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="rEBmWnCE7U8U" outputId="082e2106-34b0-4833-8cda-6eb78170d2b8" tags=[]
 # ============== Testing ==============
 print(Context(K=2,C=2,T=2,M=2))
 # =====================================
+```
 
-# %% [markdown] id="qaCQegCr7gmr"
-# ## SymmetricMatrix
+<!-- #region id="qaCQegCr7gmr" -->
+## SymmetricMatrix
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 8096, "status": "ok", "timestamp": 1601111600275, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UZ1OAjwb7fh-" outputId="2f796666-8582-4ac0-dc58-a8995ec1d67f" tags=[]
+```python executionInfo={"elapsed": 8096, "status": "ok", "timestamp": 1601111600275, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UZ1OAjwb7fh-" outputId="2f796666-8582-4ac0-dc58-a8995ec1d67f" tags=[]
 # ============== Testing ==============
 m = SymmetricMatrix(4)
 m[1,2] = 0.12
 m[0,3] = 1.2
 print(m)
 # =====================================
+```
 
-# %% [markdown] id="vx-nMs4i8Rco"
-# ## Schedule
+<!-- #region id="vx-nMs4i8Rco" -->
+## Schedule
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 8068, "status": "ok", "timestamp": 1601111600276, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="-waDipGR8QPd" outputId="2fae03b4-1f56-4e03-c6e6-9f9101edc5cf" tags=[]
+```python executionInfo={"elapsed": 8068, "status": "ok", "timestamp": 1601111600276, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="-waDipGR8QPd" outputId="2fae03b4-1f56-4e03-c6e6-9f9101edc5cf" tags=[]
 # ============== Testing ==============
 set_input(TestCases[1])
 
@@ -660,11 +685,13 @@ s[0][1] = s[1][1]
 s[1][1] = t
 print(s)
 # =====================================
+```
 
-# %% [markdown] id="FXuMr-Ik8mJZ"
-# # Benchmarks
+<!-- #region id="FXuMr-Ik8mJZ" -->
+# Benchmarks
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 8044, "status": "ok", "timestamp": 1601111600277, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="ekIFN0Uq8oFK" outputId="557a4d3b-ed08-4c21-a68e-47f64d199c31" tags=[]
+```python executionInfo={"elapsed": 8044, "status": "ok", "timestamp": 1601111600277, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="ekIFN0Uq8oFK" outputId="557a4d3b-ed08-4c21-a68e-47f64d199c31" tags=[]
 # benchmark setup
 set_input(TestCases[2])
 context = input_context()
@@ -673,21 +700,25 @@ s = Schedule(context, distance)
 s.randomize()
 
 print(s)
+```
 
-# %% executionInfo={"elapsed": 12703, "status": "ok", "timestamp": 1601111604958, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="G2rBxBh78qcn" outputId="cb34d390-1dbb-441c-f23f-f2d2793d7a64" tags=[]
-# %%timeit
+```python executionInfo={"elapsed": 12703, "status": "ok", "timestamp": 1601111604958, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="G2rBxBh78qcn" outputId="cb34d390-1dbb-441c-f23f-f2d2793d7a64" tags=[]
+%%timeit
 s.G
+```
 
-# %% [markdown] id="kTYYQxe59vxd"
-# # Algo testing utilities
-# This code is used to test an algo's performance on different test cases in order to compare multiple different algos.
-#
+<!-- #region id="kTYYQxe59vxd" -->
+# Algo testing utilities
+This code is used to test an algo's performance on different test cases in order to compare multiple different algos.
 
-# %% [markdown] id="pMGRcB9GBff9"
-# ## Test DS definitions
-# These are used to manage the test perfomance data of an algo.
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 12690, "status": "ok", "timestamp": 1601111604959, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="Qyndj28v98RT"
+<!-- #region id="pMGRcB9GBff9" -->
+## Test DS definitions
+These are used to manage the test perfomance data of an algo.
+<!-- #endregion -->
+
+```python executionInfo={"elapsed": 12690, "status": "ok", "timestamp": 1601111604959, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="Qyndj28v98RT"
 from dataclasses import dataclass
 from typing import List, Any
 
@@ -713,13 +744,14 @@ class TestParams:
     test_case_repetition: int
     generated_test_case_count: int
     test_cases: List[TestCase]
+```
 
+<!-- #region id="YIfkoRtCBqYe" -->
+## Algo definition
+This defines what an algo is supposed to be. An algo that must be tested has to be a function that takes a `Context` and an `SymmetricMatrix` as input, and returns a tuple of the output string and the best G value as output.
+<!-- #endregion -->
 
-# %% [markdown] id="YIfkoRtCBqYe"
-# ## Algo definition
-# This defines what an algo is supposed to be. An algo that must be tested has to be a function that takes a `Context` and an `SymmetricMatrix` as input, and returns a tuple of the output string and the best G value as output.
-
-# %% executionInfo={"elapsed": 12683, "status": "ok", "timestamp": 1601111604961, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="ezd5phnbAlVS"
+```python executionInfo={"elapsed": 12683, "status": "ok", "timestamp": 1601111604961, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="ezd5phnbAlVS"
 from typing import Callable, Tuple
 
 # Define an algo
@@ -729,12 +761,13 @@ from typing import Callable, Tuple
 #          G value of best schedule, 
 #          no. of iterations
 Algo = Callable[[Context, SymmetricMatrix], Tuple[str, float, int]]
+```
 
+<!-- #region id="3-pX_ls6QDPh" -->
+## Test case generation
+<!-- #endregion -->
 
-# %% [markdown] id="3-pX_ls6QDPh"
-# ## Test case generation
-
-# %% executionInfo={"elapsed": 12676, "status": "ok", "timestamp": 1601111604963, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UGG_hbFJP2mw"
+```python executionInfo={"elapsed": 12676, "status": "ok", "timestamp": 1601111604963, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UGG_hbFJP2mw"
 # Generate context
 def genContext(N: int = None) -> Context:
     # returns a list of List[int,int,int] that are factors of N
@@ -780,12 +813,14 @@ def genTestCase(context: Context = None) -> TestCase:
     return TestCase(context, genDistMatrix(context))
 
 
+```
 
-# %% [markdown] id="SYqgrw2bCV5V"
-# ## Testing functions
-# These functions test the algo and record its performance.
+<!-- #region id="SYqgrw2bCV5V" -->
+## Testing functions
+These functions test the algo and record its performance.
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 15307, "status": "ok", "timestamp": 1601111607613, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="_oypfCHbAk00" outputId="e1807261-9027-4afb-d633-0f326abfc4c4" tags=[]
+```python executionInfo={"elapsed": 15307, "status": "ok", "timestamp": 1601111607613, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="_oypfCHbAk00" outputId="e1807261-9027-4afb-d633-0f326abfc4c4" tags=[]
 from typing import Tuple, List
 from timeit import default_timer as timer
 import multiprocessing as mp
@@ -839,11 +874,13 @@ def testAlgo(algo: Algo, test_params: TestParams) -> List[Tuple[TestCase, TestRe
     return ray.get(par)
 
 
+```
 
-# %% [markdown] id="e9UwwXt9bSu1"
-# ## Plotting functions
+<!-- #region id="e9UwwXt9bSu1" -->
+## Plotting functions
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 1758, "status": "ok", "timestamp": 1601114495058, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="oj_5VlRzbWot"
+```python executionInfo={"elapsed": 1758, "status": "ok", "timestamp": 1601114495058, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="oj_5VlRzbWot"
 import pandas as pd
 
 # converts TestResult to a dataframe with normalised G values
@@ -874,13 +911,12 @@ def test_out_to_df(test_out: List[Tuple[TestCase, TestResult]]) -> pd.DataFrame:
 def mk_boxplot(data: pd.DataFrame):
     # group data by test case
     data.groupby(['K','M','T','C'])
+```
 
+## Standard test paramaters
+Used for comparing different algos with the same test cases.
 
-# %% [markdown]
-# ## Standard test paramaters
-# Used for comparing different algos with the same test cases.
-
-# %%
+```python
 std_test_params = [
     # Test with 10 common generated test cases
     TestParams(
@@ -891,16 +927,17 @@ std_test_params = [
         ]
     )
 ]
+```
 
 
-# %% [markdown] id="2hKq6IfZgJ7R"
-# # Algorithms
-# The main algos we create.
+<!-- #region id="2hKq6IfZgJ7R" -->
+# Algorithms
+The main algos we create.
+<!-- #endregion -->
 
-# %% [markdown]
-# # Genetic Algorithm
+# Genetic Algorithm
 
-# %%
+```python
 from typing import Tuple
 import random
 
@@ -967,11 +1004,11 @@ class GA:
         # print('Mutant: \n', self.population)
         
         return (str(self.population), G_child, 1)
+```
 
-# %% [markdown]
-# ### Test on pre-defined test cases
+### Test on pre-defined test cases
 
-# %% tags=[]
+```python tags=[]
 # ============================
 # Set input for colab notebook
 # ============================
@@ -990,28 +1027,31 @@ bestS, bestG, iterations = ga.Evolution()
 print("Schedule:\n", bestS)
 print("\nG:", bestG)
 print("Iterations:", iterations)
+```
 
-# %% [markdown]
-# ### Test on generated test cases
+### Test on generated test cases
 
-# %% executionInfo={"elapsed": 236531, "status": "ok", "timestamp": 1601111828894, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UsjtMPFzTAbw" outputId="b3245be1-0f90-47df-952c-eea21011c460" tags=[]
+```python executionInfo={"elapsed": 236531, "status": "ok", "timestamp": 1601111828894, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UsjtMPFzTAbw" outputId="b3245be1-0f90-47df-952c-eea21011c460" tags=[]
 # test algo
 def test_ga(context, distance):
     model = GA(context, distance)
     return model.Evolution()
 test_result = testAlgo(test_ga, std_test_params[0])
+```
 
-# %% executionInfo={"elapsed": 902, "status": "ok", "timestamp": 1601114740560, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="eVtLa9nreCWU" outputId="a3699c89-9c6f-46ba-949f-4a42076c0ae3" tags=[]
+```python executionInfo={"elapsed": 902, "status": "ok", "timestamp": 1601114740560, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="eVtLa9nreCWU" outputId="a3699c89-9c6f-46ba-949f-4a42076c0ae3" tags=[]
 # show mean performance for different test cases
 analyse = test_out_to_df(test_result).groupby(['K','M','T','C']).mean()
 analyse
 
 
+```
 
-# %% [markdown] id="B_GeFozK-9Z9"
-# ## Random Search
+<!-- #region id="B_GeFozK-9Z9" -->
+## Random Search
+<!-- #endregion -->
 
-# %% executionInfo={"elapsed": 15272, "status": "ok", "timestamp": 1601111607620, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="JhQJemIhRbC6"
+```python executionInfo={"elapsed": 15272, "status": "ok", "timestamp": 1601111607620, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="JhQJemIhRbC6"
 from typing import Tuple
 def randomSearch(context: Context, distance: SymmetricMatrix) -> Tuple[str, float, int]:
     # create schedule object
@@ -1030,11 +1070,11 @@ def randomSearch(context: Context, distance: SymmetricMatrix) -> Tuple[str, floa
             bestG = s.G
         iterations += 1
     return (bestS, bestG, iterations,)
+```
 
-# %% [markdown]
-# ### Test on pre-defined test cases
+### Test on pre-defined test cases
 
-# %% cellView="both" executionInfo={"elapsed": 238783, "status": "ok", "timestamp": 1601111831207, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="Zu6JOxnItEDE" outputId="f8fcdab9-8911-49bf-913d-ef1a4317e6d8" tags=[]
+```python cellView="both" executionInfo={"elapsed": 238783, "status": "ok", "timestamp": 1601111831207, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="Zu6JOxnItEDE" outputId="f8fcdab9-8911-49bf-913d-ef1a4317e6d8" tags=[]
 # ============================
 # Set input for colab notebook
 # ============================
@@ -1051,15 +1091,17 @@ bestS, bestG, iterations = randomSearch(context, distance)
 print(bestS)
 print("\nG:", bestG)
 print("Iterations:", iterations)
+```
 
-# %% [markdown]
-# ### Test on generated test cases
+### Test on generated test cases
 
-# %% executionInfo={"elapsed": 236531, "status": "ok", "timestamp": 1601111828894, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UsjtMPFzTAbw" outputId="b3245be1-0f90-47df-952c-eea21011c460" tags=[]
+```python executionInfo={"elapsed": 236531, "status": "ok", "timestamp": 1601111828894, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="UsjtMPFzTAbw" outputId="b3245be1-0f90-47df-952c-eea21011c460" tags=[]
 # test algo
 test_result = testAlgo(randomSearch, std_test_params[0])
+```
 
-# %% executionInfo={"elapsed": 902, "status": "ok", "timestamp": 1601114740560, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="eVtLa9nreCWU" outputId="a3699c89-9c6f-46ba-949f-4a42076c0ae3"
+```python executionInfo={"elapsed": 902, "status": "ok", "timestamp": 1601114740560, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="eVtLa9nreCWU" outputId="a3699c89-9c6f-46ba-949f-4a42076c0ae3"
 # show mean performance for different test cases
 analyse = test_out_to_df(test_result).groupby(['K','M','T','C']).mean()
 analyse
+```
