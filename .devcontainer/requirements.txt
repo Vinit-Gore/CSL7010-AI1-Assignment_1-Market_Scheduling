@@ -3,3 +3,9 @@ ipykernel
 jupyter
 jupytext
 pre-commit
+ray
+bs4
+pyarrow
+scikit-learn
+numpy
+pandas

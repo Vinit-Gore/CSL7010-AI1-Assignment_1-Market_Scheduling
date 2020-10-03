@@ -160,6 +160,8 @@ except:
 # =======================================================
 #       Fake input function for colab notebook
 # =======================================================
+__input = None
+__fake_input_ctr = -1
 def set_input(inp_str):
     global __input
     __input = [x.strip() for x in inp_str.split('\n')]
@@ -358,10 +360,9 @@ class Schedule:
             return r
         # returns the expectedG of a cell with k shops
         @staticmethod
-        def expectedG(k: int, avgDist: float) -> float:
+        def expectedG(context: Context, avgDist: float) -> float:
             # nC2 * avgDist
-            K = self.context.K
-            return (K*(K-1)/2) * avgDist
+            return (context.K*(context.K-1)/2) * avgDist
         # __getitem__ function overloads the [] operator
         # [x] will fetch the shop x in cell
         def __getitem__(self, pos):
@@ -376,7 +377,7 @@ class Schedule:
             self.shops[pos] = newval
             self._invalidate_cache()
             # fire cahnge listeners
-            for id, listener in self._listeners.items():
+            for listener in self._listeners.values():
                 listener(self, oldval, newval)
         # to string
         def __str__(self):
@@ -449,21 +450,21 @@ class Schedule:
             return self._cache_D[cell_idx]
         # returns the expectedG of a timeslot with m markets and k shops per cell
         @staticmethod
-        def expectedG(m: int, k: int, c: int, avgDist: float) -> float:
-            return self.expectedS(m,k,avgDist) + c*self.expectedD(m,k,avgDist)
+        def expectedG(context: Context, avgDist: float) -> float:
+            return Schedule.Timeslot.expectedS(context, avgDist) + context.C*Schedule.Timeslot.expectedD(context, avgDist)
         # returns the expectedS of a timeslot with m markets and k shops per cell
         @staticmethod
-        def expectedS(m: int, k: int, avgDist: float) -> float:
-            return m*Schedule.Cell.expectedG(k,avgDist)
+        def expectedS(context: Context, avgDist: float) -> float:
+            return context.M*Schedule.Cell.expectedG(context, avgDist)
         # returns the expectedD of a timeslot with m markets and k shops per cell
         @staticmethod
-        def expectedD(m: int, k: int, avgDist: float) -> float:
-            return self.expectedCellD(m,k,avgDist)*m/2
+        def expectedD(context: Context, avgDist: float) -> float:
+            return Schedule.Timeslot.expectedCellD(context, avgDist)*context.M/2
         # returns the expectedD of a cell in a timeslot with m markets and k shops per cell
         # the total D value of a timeslot is half of (this value * M)
         @staticmethod
-        def expectedCellD(k: int, avgDist: float) -> float:
-            return avgDist*(k**2)/2
+        def expectedCellD(context: Context, avgDist: float) -> float:
+            return avgDist*(context.K**2)/2
         # builds D cache
         def _buildDCache(self):
             M = self.context.M
@@ -516,7 +517,21 @@ class Schedule:
         self.context = context
         self.distances = distances
         # allocate timeslots
-        self.timeslots = [ Schedule.Timeslot(context, distances) for i in range(context.T) ]
+        self.timeslots = [Schedule.Timeslot(context, distances) for i in range(context.T)]
+    # returns the G value of the schedule
+    def G(self) -> float:
+        return sum(map(lambda t:t.G), self.timeslots)
+    # returns the D value of the schedule
+    def D(self) -> float:
+        return sum(map(lambda t:t.D), self.timeslots)
+    # returns the expected G
+    @staticmethod
+    def expectedG(context: Context, avgDist: float) -> float:
+        return context.T * Schedule.Timeslot.expectedG(context, avgDist)
+    # returns the expected D
+    @staticmethod
+    def expectedD(context: Context, avgDist: float) -> float:
+        return context.T * Schedule.Timeslot.expectedD(context, avgDist)
     # replace timeslot with contents of list
     def _fromList(self, lst: List[int]):
         # apply list to cells
@@ -548,44 +563,6 @@ class Schedule:
                 ) for m in range(self.context.M)
             ]
         )
-
-
-# %% tags=[]
-# ============== Testing ==============
-set_input(TestCases[1])
-
-context = input_context()
-distance = input_distances(context)
-
-s = Schedule(context, distance)
-# print entire schedule
-print("\nSchedule:-")
-s.randomize()
-
-print()
-print(s)
-print(f"s[0][0] D value: {s[0].getCellD(0)}")
-print(f"s[0][1] D value: {s[0].getCellD(1)}")
-s[0][0][0] = 1
-print()
-print(s)
-print(f"s[0][0] D value: {s[0].getCellD(0)}")
-print(f"s[0][1] D value: {s[0].getCellD(1)}")
-print(f"s[0].G: {s[0].G}")
-print("correct")
-s[0]._buildDCache()
-s[0]._cache_G = None
-print(f"s[0][0] D value: {s[0].getCellD(0)}")
-print(f"s[0][1] D value: {s[0].getCellD(1)}")
-print(f"s[0].G: {s[0].G}")
-
-print("\n swap testing \n")
-print(s)
-print()
-t = s[0,1]
-s[0][1] = s[1][1]
-s[1][1] = t
-print(s)
 
 # %% executionInfo={"elapsed": 8159, "status": "ok", "timestamp": 1601111600270, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="03S_eu4A4GLh"
 # Imports
@@ -822,22 +799,34 @@ distance = input_distances(context)
 s = Schedule(context, distance)
 # print entire schedule
 print("\nSchedule:-")
+s.randomize()
+
+print(f"Schedule:-")
 print(s)
+print(f"Schedule G-Value: {s.G}\n")
 
-# 2nd timeslot
-print("s[0]:",s[0])
+print(f"s[0][0] D value: {s[0].getCellD(0)}")
+print(f"s[0][1] D value: {s[0].getCellD(1)}")
+s[0][0][0] = 1
+print()
+print(s)
+print(f"s[0][0] D value: {s[0].getCellD(0)}")
+print(f"s[0][1] D value: {s[0].getCellD(1)}")
+print(f"s[0].G: {s[0].G}")
+print("correct")
+s[0]._buildDCache()
+s[0]._cache_G = None
+print(f"s[0][0] D value: {s[0].getCellD(0)}")
+print(f"s[0][1] D value: {s[0].getCellD(1)}")
+print(f"s[0].G: {s[0].G}")
 
-# 2nd cell in 2nd timeslot
-print("s[0][1]:", s[0,1])
-
-# 1st shop in 2nd cell in 2nd timeslot
-print("s[0][1][0]:", s[0,1,0])
-
-# print G value of 1st market in 1st timeslot
-# print("\nG-value[t=0][m=0] =",s.calc_G(s.Position(0,0)))  #uncomment
-# print("\nG-value[t=0][m=1] =",s.calc_G(s.Position(0,1)))  #uncomment
-# print("\nG-value[t=0] =",s.calc_G(s.Position(0)))   #uncomment
-# print("\nG-value =",s.calc_G())   #uncomment
+print("\n swap testing \n")
+print(s)
+print()
+t = s[0,1]
+s[0][1] = s[1][1]
+s[1][1] = t
+print(s)
 # =====================================
 
 # %% [markdown] id="FXuMr-Ik8mJZ"

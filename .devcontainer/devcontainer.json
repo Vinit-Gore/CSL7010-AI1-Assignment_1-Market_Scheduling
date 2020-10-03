@@ -14,8 +14,8 @@
 		}
 	},
 
-	// Setup container configs
-	"postStartCommand": "pre-commit install",
+	// Setup container git configs
+	"postStartCommand": "pre-commit install;git config --global gpg.program $(which gpg)",
 	"workspaceFolder": "/workspace",
 	"workspaceMount": "type=bind,source=${localWorkspaceFolder},target=/workspace,consistency=cached",
 
