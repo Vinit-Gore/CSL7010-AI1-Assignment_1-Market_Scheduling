@@ -3,17 +3,23 @@ repos:
       repo: local
       hooks:
         -
-          id: jupytext
-          name: jupytext
-          entry: jupytext --sync *.ipynb
+          id: sync_notebooks
+          name: sync_notebooks
+          entry: sync_notebooks.sh
           pass_filenames: false
-          language: python
+          language: script
         -
           id: jupytext
           name: jupytext
           entry: jupytext --from ipynb --to py:percent --pre-commit
           pass_filenames: false
           language: python
+        -
+          id: stage-changes
+          name: stage-changes
+          entry: git add -u
+          pass_filenames: false
+          language: system
         -
           id: unstage-ipynb
           name: unstage-ipynb
