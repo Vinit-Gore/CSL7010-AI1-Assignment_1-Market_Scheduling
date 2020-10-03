@@ -9,9 +9,11 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.6.0
 #   kernelspec:
-#     display_name: Python 3.7.3 64-bit
-#     language: python
-#     name: python_defaultSpec_1601660090735
+#     display_name: Python 3.7.9 64-bit
+#     metadata:
+#       interpreter:
+#         hash: 4cd7ab41f5fca4b9b44701077e38c5ffd31fe66a6cab21e0214b68d958d0e462
+#     name: Python 3.7.9 64-bit
 # ---
 
 # %% [markdown] id="6GTphwF2xK9Z"
@@ -135,8 +137,8 @@
 # Install Ray for parallelism
 print('NOTE: Intentionally crashing session to use the newly installed library.\n')
 
-# !pip uninstall -y pyarrow
-# !pip install ray[debug]==0.7.5
+# # !pip uninstall -y pyarrow
+# !pip install ray
 # !pip install bs4
 
 try:
@@ -299,17 +301,17 @@ class SymmetricMatrix:
         s += "\n]"
         return s
     # returns the sum of all values
-    def sum(self):
+    def sum(self) -> float:
         if(self._cache_sum == None):
             # calc. sum
-            self._cache_sum = v = 0
+            self._cache_sum = v = 0.0
             for i in self.matrix:
                 v += sum(i)
                 self._cache_sum -= i[-1]
             self._cache_sum = v*2
         return self._cache_sum
     # returns average of all values
-    def average(self):
+    def average(self) -> float:
         return self.sum() / self.size**2
 
 
@@ -318,13 +320,13 @@ class SymmetricMatrix:
 # A class that represents a schedule as a table with `T` rows and `m` columns with each cell containing `k` elements.
 
 # %%
-from typing import List, Callable
+from typing import List, Callable, Tuple
 import random
 class Schedule:
     # Represents a single cell
     class Cell:
         # a func. that takes the cell instance and two int, shop removed and shop added
-        CelllUpdateListener = Callable[[Schedule.Cell, int, int], None]
+        CelllUpdateListener = Callable[['Schedule.Cell', int, int], None]
         def __init__(self, context: Context, distances: SymmetricMatrix):
             self.context = context
             self.distances = distances
@@ -352,7 +354,7 @@ class Schedule:
                         self._cache_G += 1 - self.distances[self.shops[i]-1, self.shops[j]-1]
             return self._cache_G
         # returns D between this cell and the other
-        def calcD(self, other: Schedule.Cell) -> float:
+        def calcD(self, other: 'Schedule.Cell') -> float:
             r = 0
             for s in self.shops:
                 for l in other.shops:
@@ -402,7 +404,7 @@ class Schedule:
             self._cache_D = [None] * context.M
             self._invalidate_cache()
         # called when a cell contents change
-        def onCellChange(self, cell: Schedule.Cell, removedShop: int, addedShop: int):
+        def onCellChange(self, cell: 'Schedule.Cell', removedShop: int, addedShop: int):
             # update D cache if D cache is valid
             if(self._cache_D_valid):
                 updated_idx = -1
@@ -459,12 +461,12 @@ class Schedule:
         # returns the expectedD of a timeslot with m markets and k shops per cell
         @staticmethod
         def expectedD(context: Context, avgDist: float) -> float:
-            return Schedule.Timeslot.expectedCellD(context, avgDist)*context.M/2
+            m = context.M # select 2 out of m markets
+            return (m*(m-1)/2)*Schedule.Timeslot.expectedCellD(context, avgDist)
         # returns the expectedD of a cell in a timeslot with m markets and k shops per cell
-        # the total D value of a timeslot is half of (this value * M)
         @staticmethod
         def expectedCellD(context: Context, avgDist: float) -> float:
-            return avgDist*(context.K**2)/2
+            return avgDist*(context.K**2)
         # builds D cache
         def _buildDCache(self):
             M = self.context.M
@@ -478,7 +480,7 @@ class Schedule:
         # __getitem__ function overloads the [] operator
         # [y,z] will fetch y cell -> shop at position z in the cell
         # [x] will fetch the entire x cell
-        def __getitem__(self, pos):
+        def __getitem__(self, pos) -> 'Schedule.Cell':
             # magic
             if (type(pos) == tuple):
                 if(len(pos) == 1):
@@ -486,7 +488,7 @@ class Schedule:
                 return self.cells[pos[0]][pos[1:]]
             else:
                 return self.cells[pos]
-        def __setitem__(self, pos, newval: Schedule.Cell):
+        def __setitem__(self, pos, newval: 'Schedule.Cell'):
             M = self.context.M
             oldval = self.cells[pos]
             self.cells[pos] = newval
@@ -519,11 +521,13 @@ class Schedule:
         # allocate timeslots
         self.timeslots = [Schedule.Timeslot(context, distances) for i in range(context.T)]
     # returns the G value of the schedule
+    @property
     def G(self) -> float:
-        return sum(map(lambda t:t.G), self.timeslots)
+        return sum(map(lambda t:t.G, self.timeslots))
     # returns the D value of the schedule
+    @property
     def D(self) -> float:
-        return sum(map(lambda t:t.D), self.timeslots)
+        return sum(map(lambda t:t.D, self.timeslots))
     # returns the expected G
     @staticmethod
     def expectedG(context: Context, avgDist: float) -> float:
@@ -564,178 +568,6 @@ class Schedule:
             ]
         )
 
-# %% executionInfo={"elapsed": 8159, "status": "ok", "timestamp": 1601111600270, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="03S_eu4A4GLh"
-# Imports
-from typing import Tuple
-import random
-# Schedule indexed as [time, market, k]
-# Schedule[time] gives the entire time slot which is a list of T cells with each cell being a list having k shops.
-class Schedule_old:
-    # This is used to locate different elements of the schedule
-    from dataclasses import dataclass
-    @dataclass
-    class Position:
-        timeslot_idx: int = None
-        market_idx: int = None
-        shop_idx: int = None
-        # validates the position object w.r.t the given context
-        def validate(self, context: Context, 
-                                 validate_timeslot=True, 
-                                 validate_market=True, 
-                                 validate_shop=True) -> bool:
-            if(validate_timeslot):
-                if(self.timeslot_idx < 0 
-                     or self.timeslot_idx >= context.T):
-                    return False
-            if(validate_market):
-                if(self.market_idx < 0 
-                     or self.market_idx >= context.M):
-                    return False
-            if(validate_shop):
-                if(self.shop_idx < 0 
-                     or self.shop_idx >= context.K):
-                    return False
-            return True
-            
-    
-    # This generates a schedule full of None values.
-    def __init__(self, context: Context, distance_matrix: SymmetricMatrix):
-        # save context and distance matrix
-        self.context = context
-        self.distance = distance_matrix
-        # allocate space for schedule
-        self.matrix = [None]*context.T            # T rows
-        for m in range(context.T):
-            self.matrix[m] = [None]*context.M       # M columns
-            for t in range(context.M):
-                self.matrix[m][t] = [None]*context.K  # k shops per cell
-                
-    def custom_sch(self, seq: list):
-        #input your custom schedule. Make sure all elements are integers and no element is repeated.
-        #Entering cell-wise i.e. 1 2 | 5 6
-        #                        3 4 | 7 8
-        i = 0
-        for t in range(self.context.T):
-            for m in range(self.context.M):
-                for k in range(self.context.K):
-                    self.matrix[t][m][k] = seq[i]
-                    i = i+1
-        
-    
-    # This randomises the schedule
-    def randomize(self, seed = random.seed()):
-        serial_sch = list(range(1,self.context.N+1))
-        # shuffle schedule
-        # random.Random(seed).shuffle(serial_sch)
-        # set schedule contents to contents of serial_sch
-        self.custom_sch(serial_sch)
-        
-    # define str funtion to print schedule as final output
-    def __str__(self):
-        return "\n".join(
-                [
-                 " | ".join(
-                         " ".join(
-                                 map(str, self.matrix[t][m])
-                         )
-                         for t in range(self.context.T)
-                 ) 
-                 for m in range(self.context.M)
-                ]
-        )
-    
-    # __getitem__ function overloads the [] operator
-    # [x,y,z] will fetch x timeslot -> y market -> shop at position z in the cell
-    # [x] will fetch the entire x timeslot
-    def __getitem__(self, pos):
-        # magic
-        if (type(pos) == tuple):
-            l = len(pos)
-            if l == 1:
-                self.matrix[pos[0]]
-            elif l == 2:
-                return self.matrix[pos[0]][pos[1]]
-            elif l == 3:
-                return self.matrix[pos[0]][pos[1]][pos[2]]
-        else:
-            return self.matrix[pos]
-
-    # ============= Problem Specific =============
-    # calculates the G value of a given schedule element or the entire schedule
-    def calc_G(self, position: Position = Position()) -> float:
-        if (position.timeslot_idx != None 
-             and position.market_idx != None):
-            # calc cell G value
-            return self.calc_cell_G(position)
-        elif (position.timeslot_idx != None):
-            # calc timeslot G value
-            return self.calc_timeslot_G(position)
-        else:
-            # calc schedule G value
-            G = 0
-            pos = self.Position(0,None,None)
-            while(pos.timeslot_idx < self.context.T):
-                G += self.calc_timeslot_G(pos)
-                pos.timeslot_idx += 1
-            return G
-    
-    # calculates the D value between two cells
-    # this does not multiply the values with C
-    def calc_intercell_D(self, pos_1: Position, pos_2: Position) -> float:
-        # validate cell positions
-        if (not pos_1.validate(self.context, validate_shop=False)
-                or not pos_2.validate(self.context, validate_shop=False)):
-            raise Exception("Invalid position:", pos_1, pos_2)
-        if (pos_1.timeslot_idx != pos_2.timeslot_idx):
-            raise Exception("Cannot calculate G value between cells of different timeslots.", pos_1, pos_2)
-        if(pos_1 == pos_2):
-            return 0
-        # calculate inter-cell G value
-        D = 0
-        shops_1 = self.matrix[pos_1.timeslot_idx][pos_1.market_idx]
-        shops_2 = self.matrix[pos_2.timeslot_idx][pos_2.market_idx]
-        k = self.context.K
-        for i in range(k):
-            for j in range(k):
-                D += self.distance[shops_1[i]-1, shops_2[j]-1]
-        return D
-    
-    # calculates the G value of a timeslot
-    def calc_timeslot_G(self, position: Position) -> float:
-        # check if position valid
-        if(not position.validate(self.context, validate_market=False, validate_shop=False)):
-            raise Exception("Invalid position:", position)
-        # calculate S and D
-        S, D = 0, 0
-        # position iterators
-        pos_1, pos_2 = self.Position(position.timeslot_idx,0,None), self.Position(position.timeslot_idx,0,None)
-        # pos_1 runs through each cell along timeslot
-        while pos_1.market_idx < self.context.M:
-            # add current cell G
-            S += self.calc_cell_G(pos_1)
-            # add intra cell G w.r.t current cell
-            pos_2.market_idx = pos_1.market_idx + 1
-            while pos_2.market_idx < self.context.M:
-                D += self.calc_intercell_D(pos_1, pos_2)
-                pos_2.market_idx += 1
-            pos_1.market_idx += 1
-        # G = S + C*D
-        return S + self.context.C * D
-
-    # calculates the G value of a single cell
-    def calc_cell_G(self, position: Position) -> float:
-        # check if position valid
-        if(not position.validate(self.context, validate_shop=False)):
-            raise Exception("Invalid position:", position)
-        shops = self.matrix[position.timeslot_idx][position.market_idx]
-        S = 0
-        for i in range(len(shops)):
-            for j in range(i+1, len(shops)):
-                S += 1 - self.distance[shops[i]-1, shops[j]-1]
-        return S
-    # ============================================
-
-
 # %% [markdown] id="mB6LJff2gzIZ"
 # # Utility functions
 # ## input_context()
@@ -763,14 +595,14 @@ def input_distances(context: Context) -> SymmetricMatrix:
 # %% [markdown] id="PLIwWsMc7ne4"
 # ## TestCases
 
-# %% executionInfo={"elapsed": 8132, "status": "ok", "timestamp": 1601111600273, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="H0nvL5k87lX4" outputId="8c8bff93-9d24-4bc9-aa99-f0fda5477174"
+# %% executionInfo={"elapsed": 8132, "status": "ok", "timestamp": 1601111600273, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="H0nvL5k87lX4" outputId="8c8bff93-9d24-4bc9-aa99-f0fda5477174" tags=["outputPrepend"]
 for t in range(len(TestCases)):
     print(f"\nTst Case {t}:-\n", TestCases[t])
 
 # %% [markdown] id="p077XZYw7i7o"
 # ## Context
 
-# %% executionInfo={"elapsed": 8116, "status": "ok", "timestamp": 1601111600274, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="rEBmWnCE7U8U" outputId="082e2106-34b0-4833-8cda-6eb78170d2b8"
+# %% executionInfo={"elapsed": 8116, "status": "ok", "timestamp": 1601111600274, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="rEBmWnCE7U8U" outputId="082e2106-34b0-4833-8cda-6eb78170d2b8" tags=[]
 # ============== Testing ==============
 print(Context(K=2,C=2,T=2,M=2))
 # =====================================
@@ -832,7 +664,7 @@ print(s)
 # %% [markdown] id="FXuMr-Ik8mJZ"
 # # Benchmarks
 
-# %% executionInfo={"elapsed": 8044, "status": "ok", "timestamp": 1601111600277, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="ekIFN0Uq8oFK" outputId="557a4d3b-ed08-4c21-a68e-47f64d199c31"
+# %% executionInfo={"elapsed": 8044, "status": "ok", "timestamp": 1601111600277, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="ekIFN0Uq8oFK" outputId="557a4d3b-ed08-4c21-a68e-47f64d199c31" tags=[]
 # benchmark setup
 set_input(TestCases[2])
 context = input_context()
@@ -844,7 +676,7 @@ print(s)
 
 # %% executionInfo={"elapsed": 12703, "status": "ok", "timestamp": 1601111604958, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="G2rBxBh78qcn" outputId="cb34d390-1dbb-441c-f23f-f2d2793d7a64"
 # %%timeit
-s.calc_G()
+s.G
 
 # %% [markdown] id="kTYYQxe59vxd"
 # # Algo testing utilities
@@ -1014,33 +846,16 @@ def testAlgo(algo: Algo, test_params: TestParams) -> List[Tuple[TestCase, TestRe
 # %% executionInfo={"elapsed": 1758, "status": "ok", "timestamp": 1601114495058, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="oj_5VlRzbWot"
 import pandas as pd
 
-def expectedG(test_case: TestCase) -> float:
-    ctx, dst = test_case.context, test_case.distance
-    # calc sum of dist
-    s = 0
-    for r in dst.matrix:
-        s += sum(r)
-    s *= 2
-    # calc average distance
-    avgDist = s / (ctx.N ** 2)
-    # create dummy schedule to calc. expected G
-    dummyDst = SymmetricMatrix(ctx.N)
-    for i in range(ctx.N):
-        for j in range(i+1, ctx.N):
-            dummyDst[i,j] = avgDist
-    # return expected G
-    s = Schedule(ctx, dummyDst)
-    s.randomize()
-    return s.calc_G()
-
 # converts TestResult to a dataframe with normalised G values
 def testresult_to_df(test_res: Tuple[TestCase, TestResult]) -> pd.DataFrame:
     tcase, tres = test_res
     # make df
     df = pd.DataFrame(tres.to_dict())
     # normalise G to expected G, i.e. estimated average G
-    df['G_value'] *= 1/expectedG(tcase)
-    df = df.rename(columns={'G_value': 'normalised_G'})
+    try:
+        df['normalised_G'] = df['G_value'] * 1/Schedule.expectedG(tcase.context, tcase.distance.average())
+    except:
+        df['normalised_G'] = [-1] * len(tres.G_values)
     # add test case values
     df['K'] = tcase.context.K
     df['M'] = tcase.context.M
@@ -1092,10 +907,10 @@ import random
 class GA:
     def __init__(self, context: Context, distance: SymmetricMatrix):
         # create schedule object
-        self.population = Schedule (context, distance)
+        self.population = Schedule(context, distance)
         self.population.randomize()
     
-    def Mutation(self, timeslot):
+    def Mutation(self, timeslot: Schedule.Timeslot):
         #select market randomly
         mother_index = random.randint(0, self.population.context.M - 1)
         father_index = random.randint(0, self.population.context.M - 1)
@@ -1105,16 +920,16 @@ class GA:
             return
         
         #random cell for mutation    
-        motherCell = timeslot [mother_index]
-        fatherCell = timeslot [father_index]    
+        motherCell: Schedule.Cell = timeslot[mother_index]
+        fatherCell: Schedule.Cell = timeslot[father_index]    
         
         mother_min, father_min = 1, 1
         mother_k, father_k = 0,0  #just in case S is 1 for all shop pairs
         
-        for i in range(len(motherCell)):
-            for j in range(i+1, len(motherCell)):
-                S_mother = 1 - self.population.distance[motherCell[i]-1, motherCell[j]-1]
-                S_father = 1 - self.population.distance[fatherCell[i]-1, fatherCell[j]-1]
+        for i in range(len(motherCell.shops)):
+            for j in range(i+1, len(motherCell.shops)):
+                S_mother = 1 - self.population.distances[motherCell[i]-1, motherCell[j]-1]
+                S_father = 1 - self.population.distances[fatherCell[i]-1, fatherCell[j]-1]
                 
                 if S_mother < mother_min:
                     mother_k = random.choice([i,j]) #select either element of lowest G pair
@@ -1139,14 +954,14 @@ class GA:
     
         #Pick a time schedule to mutate
         Time_n = random.randint(0,self.population.context.T-1)
-        G_parent = self.population.calc_G(self.population.Position(timeslot_idx=Time_n))
+        G_parent = self.population[Time_n].G
     
         print("Parent: ",self.population[Time_n], G_parent)
         print('Parent: \n', self.population)
     
         #Offspring after mutation
         self.Mutation(self.population[Time_n])
-        G_child = self.population.calc_G(s.Position(timeslot_idx=Time_n))
+        G_child = self.population[Time_n].G
     
         print("Mutant: ",self.population[Time_n], G_child)
         print('Mutant: \n', self.population)
@@ -1171,11 +986,10 @@ def randomSearch(context: Context, distance: SymmetricMatrix) -> Tuple[str, floa
     start = timer()
     while (timer() - start < 2):
         s.randomize()
-        G = s.calc_G()
-        if(G > bestG):
+        if(s.G > bestG):
             bestS = str(s)
-            bestG = G
-        iterations +=1
+            bestG = s.G
+        iterations += 1
     return (bestS, bestG, iterations,)
 
 
