@@ -142,7 +142,6 @@ https://github.com/ray-project/tutorial
 
 ```python executionInfo={"elapsed": 7806, "status": "ok", "timestamp": 1601111599799, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="2EjS5UJ7PEff" outputId="d27b62eb-b011-484d-9794-8cb40ba4b02d" tags=[]
 # Install Ray for parallelism
-print('NOTE: Intentionally crashing session to use the newly installed library.\n')
 
 # !pip uninstall -y pyarrow
 !pip install ray
@@ -152,6 +151,7 @@ try:
     import ray
 except:
     # A hack to force the runtime to restart, needed to include the above dependencies.
+    print('Ray not found. NOTE: Intentionally crashing session to use the newly installed library.\n')
     import os
     os._exit(0)
 ```
