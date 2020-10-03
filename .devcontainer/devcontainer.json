@@ -2,17 +2,19 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.140.1/containers/python-3
 {
 	"name": "Python 3.7",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"context": "..",
-		"args": { 
-			// Update 'VARIANT' to pick a Python version: 3, 3.6, 3.7, 3.8 
-			"VARIANT": "3.7",
-			// Options
-			"INSTALL_NODE": "false",
-			"NODE_VERSION": "lts/*"
-		}
-	},
+	// Use online built image
+	"image": "jaideep12/csl7010-ai1-assignment_1-market_scheduling:latest",
+	// "build": {
+	// 	"dockerfile": "Dockerfile",
+	// 	"context": "..",
+	// 	"args": { 
+	// 		// Update 'VARIANT' to pick a Python version: 3, 3.6, 3.7, 3.8 
+	// 		"VARIANT": "3.7",
+	// 		// Options
+	// 		"INSTALL_NODE": "false",
+	// 		"NODE_VERSION": "lts/*"
+	// 	}
+	// },
 
 	// Setup container git configs
 	"postStartCommand": "pre-commit install;git config --global gpg.program $(which gpg)",
