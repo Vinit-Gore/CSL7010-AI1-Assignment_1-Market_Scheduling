@@ -509,7 +509,7 @@ class Schedule:
             self.cells[pos] = newval
             # update registry
             oldval._unregisterChangeListener(self)
-            newval._registerChangeListener(self)
+            newval._registerChangeListener(self.onCellChange, self)
             # reset pos cache D
             self._cache_D[pos] = 0
             # update D cache if it is valid
