@@ -914,13 +914,14 @@ class GA:
         self.population.randomize()
     
     def Mutation(self, timeslot: Schedule.Timeslot):
-        #select market randomly
-        mother_index = random.randint(0, self.population.context.M - 1)
-        father_index = random.randint(0, self.population.context.M - 1)
         
-        #in case of M<=2 mutation will result in a continuous loop. Will be ttaken care of by crossover
-        if mother_index is father_index:
-            return
+        mincellG = timeslot[0].G
+        mother_index = 0
+        for cell in timeslot:
+            if cell.G < mincellG:
+                mother_index = timeslot.index(cell)
+
+        father_index = random.choice([random.choice(range(mother_index)), random.choice(mother_index+1, len(timeslot))])
         
         #random cell for mutation    
         motherCell: Schedule.Cell = timeslot[mother_index]
@@ -951,20 +952,51 @@ class GA:
         
         #print (mother_index, mother_k, mother_gene, end='\n')
         #print (father_index, father_k, father_gene, end='\n')
+
+    def Crossover(self) -> int:
+         #select timeslot with min G
+        t, t1 =0, 0
+        mintimeG = self.population[t1].G
+        for timeslot in self.population:
+            t = t+1
+            if (timeslot.G < mintimeG):
+                mintimeG = timeslot.G
+                t1 = t
+        t2 = random.choice(range(self.population.context.T))
+        while t1 is t2:
+            t2 = random.choice(range(self.population.context.T))
+        
+        #initiating market indexes to be used for crossover
+        m_idx=[0,0]  
+        
+        #for each timeslot of the two
+        for count in range(2):
+            #initiating combined S value with max value i.e. K
+            S_combined_min = self.population.context.K * ( self.population.context.K + 1)
+            #loop over  the markets of current timeslot
+            for i in range(self.population.context.M):
+                
+                #S_combined value of the cells in the timeslot
+                S_combined = self.population[t1][i].G
+                if S_combined < S_combined_min:
+                    S_combined_min = S_combined
+                    m_idx[count] = i
+        return t1          
+        
+        #swap cells
+        temp = self.population[t1][m_idx[0]]
+        self.population[t1][m_idx[0]] = self.population[t2][m_idx[1]]
+        self.population[t2][m_idx[1]] = temp
         
     def Evolution(self) -> Tuple[str, float, int]:
     # create schedule object
     
-        #Pick a time schedule to mutate
-        Time_n = random.randint(0,self.population.context.T-1)
-        G_parent = self.population[Time_n].G
-    
-        # print("Parent: ",self.population[Time_n], G_parent)
-        # print('Parent: \n', self.population)
-    
+        #Crossover
+        Time_n = self.Crossover()
+
         #Offspring after mutation
         self.Mutation(self.population[Time_n])
-        G_child = self.population[Time_n].G
+        G_child = self.population.G
     
         # print("Mutant: ",self.population[Time_n], G_child)
         # print('Mutant: \n', self.population)
