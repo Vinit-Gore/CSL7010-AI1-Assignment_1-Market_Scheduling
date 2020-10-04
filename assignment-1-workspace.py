@@ -325,20 +325,24 @@ import random
 class Schedule:
     # Represents a single cell
     class Cell:
-        # a func. that takes the cell instance and two int, shop removed and shop added
+        # a func. that takes the cell instance and two int, shop removed and shop added.
+        # if both ints are None this means that everything changed and all cache needs to be invalidated.
         CelllUpdateListener = Callable[['Schedule.Cell', int, int], None]
         def __init__(self, context: Context, distances: SymmetricMatrix):
             self.context = context
             self.distances = distances
             # allocate shops
             self.shops = [None] * context.K
-            # allocate cache
-            self._invalidate_cache()
             # alocate listeners
             self._listeners = dict()
+            # allocate cache
+            self._invalidate_cache()
         # invalidate all cache
         def _invalidate_cache(self):
             self._cache_G = None
+            # fire cahnge listeners to invalidate cache
+            for listener in self._listeners.values():
+                listener(self, None, None)
         # replace cell with contents of list
         def _fromList(self, lst: List[int]):
             self.shops = lst
@@ -405,6 +409,9 @@ class Schedule:
             self._invalidate_cache()
         # called when a cell contents change
         def onCellChange(self, cell: 'Schedule.Cell', removedShop: int, addedShop: int):
+            if (removedShop == None or addedShop == None):
+                # drastic change in cell, complete recalculation needed
+                self._cache_D_valid = False
             # update D cache if D cache is valid
             if(self._cache_D_valid):
                 updated_idx = -1
@@ -911,9 +918,16 @@ class GA:
     def __init__(self, context: Context, distance: SymmetricMatrix):
         self.context = context
         self.distance = distance
+        self.bestG = -1
         # create schedule object
         self.population = Schedule(context, distance)
-        self.population.randomize()
+        self.population._fromList(list(range(1,context.N+1)))
+        # create loop detection structure
+        self._resetHistory()
+    
+    def _resetHistory(self):
+        self.mutation_history = dict()
+        self.cross_history = ([], 2,)
     
     # takes two cells and performs one point crossover b/w them round the given pivot
     @staticmethod
@@ -942,69 +956,117 @@ class GA:
         GA._pivotCrossCells(context, cell_a, cell_b, random.randint(1, context.K-1))
     
     # Accepts a timeslot and performs mutation in an attempt to improve its G value.
-    @staticmethod
-    def Mutation(context: Context, timeslot: Schedule.Timeslot):
+    # this returns False mutation is not possible
+    def Mutation(self, timeslot: Schedule.Timeslot) -> bool:
         # return if not enough cells
-        if(context.M < 2):
-            return
+        if(self.context.M < 2):
+            return False
         # sort timeslot according to S values of cells
-        cells = sorted(timeslot.cells, key=lambda cell: cell.G)
+        timeslot.cells.sort(key=lambda cell: cell.G)
+        cells = timeslot.cells
         # mutate b/w worst two cells
         a, b = cells[:2]
-        GA._randomPointCrossCells(context, a, b)
-
-    def Crossover(self): 
-
-         #select timeslot with min D
-        if (self.context.T<2):
-            return (self.population[0], self.population[1])
+        # check history for loop detection with each element
+        prevPair, betterOffset = self.mutation_history.get(timeslot, ([], 2,))
+        if(a in prevPair and b in prevPair):
+            # worst elements repeated, cross one with a better cell to introduce better genes
+            if(len(cells) <= betterOffset):
+                # ran out of better choices to cross, mutation impossible
+                return False
+            betterCell = cells[betterOffset]
+            # cross a with the better offset cell
+            GA._halfPointCrossCells(context, a, betterCell)
+            betterOffset += 1
         else:
-            times = sorted (self.population , key=lambda timeslot: timeslot.D)
-            t1 , t2 = times[0], times[1]
-        
-        cell_id1 = t1.cells.index(min(t1.cells, key = lambda cell : cell.G))
-        cell_id2 = t2.cells.index(min(t2.cells, key = lambda cell : cell.G))
+            # reset better offset
+            betterOffset = 2
+        # update history
+        self.mutation_history[timeslot] = ([a,b], betterOffset,)
+        GA._randomPointCrossCells(context, a, b)
+        return True
+    
+    # performs crossover b/w two timeslots by swapping one pair of best and worst cells
+    @staticmethod
+    def _bestWorstCrossTimeslots(context: Context, slot_1: Schedule.Timeslot, slot_2: Schedule.Timeslot):
+        max_min_idx_func = lambda iter: (iter.index(max(iter)), iter.index(min(iter)))
+        best_idx_a, worst_idx_a = max_min_idx_func(slot_1._cache_D)
+        best_idx_b, worst_idx_b = max_min_idx_func(slot_2._cache_D)
+        # mutate best and worst cells
+        # GA._randomPointCrossCells(context, slot_1[best_idx_a], slot_2[worst_idx_b])
+        # GA._randomPointCrossCells(context, slot_2[best_idx_b], slot_1[worst_idx_a])
+        # return
+        # swap best with worst
+        slot_1[best_idx_a], slot_2[worst_idx_b] = slot_2[worst_idx_b], slot_1[best_idx_a]
+        slot_2[best_idx_b], slot_1[worst_idx_a] = slot_1[worst_idx_a], slot_2[best_idx_b]
 
-        #swap cells
-        temp = t1[cell_id1]
-        t1[cell_id1] = t2[cell_id2]
-        t2[cell_id2] = temp
-
-        return t1, t2
-        
+    # performs crossover b/w two timeslots and returns the selected timeslots
+    # it also returns a bool whith is false if crossover fails
+    def Crossover(self) -> Tuple[Tuple[Schedule.Timeslot, ...], bool]: 
+        # return if not enough timeslots
+        if (self.context.T < 2):
+            return (self.population[0],), False
+        # select the worst 2 timeslots according to G value
+        timeslots = sorted(self.population, key=lambda timeslot: timeslot.G)
+        a, b = timeslots[:2]
+        # check history for loop detection with each element
+        prevPair, betterOffset = self.cross_history
+        if(a in prevPair and b in prevPair):
+            # worst elements repeated, cross one with a better timeslot to introduce better genes
+            if(len(timeslots) <= betterOffset):
+                # ran out of better choices to cross, mutation impossible
+                return (a,b,), False
+            betterSlot = timeslots[betterOffset]
+            # cross a with the better offset timeslot
+            GA._bestWorstCrossTimeslots(context, a, betterSlot)
+            betterOffset += 1
+        else:
+            # reset better offset
+            betterOffset = 2
+        # update history
+        self.cross_history = ([a,b], betterOffset,)
+        # perform crossover
+        GA._bestWorstCrossTimeslots(self.context, a, b)
+        # return selected timeslots
+        return (timeslots[0], timeslots[-1],), True
+    
+    # stores the best population
+    def snapshot(self):
+        if(self.bestG < self.population.G):
+            self.bestG = self.population.G
+            self.bestS = str(self.population)
         
     def Evolution(self) -> Tuple[str, float, int]:
     # create schedule object
-        bestG = -1
-        bestS = None
         iterations = 0
         from timeit import default_timer as timer
         # run for 2 sec
         start = timer()
         while (timer() - start < 2):
-            if self.context.T > 1 :
-                #Crossover
-                Time_1, Time_2 = self.Crossover()
-
-                #Offspring after mutation
-                self.Mutation(self.context, Time_1)
-                self.Mutation(self.context, Time_2)
-
-            else:
-                self.Mutation(self.context, self.population[0])
-
-            G_child = self.population.G
-    
-            if(G_child > bestG):
-                bestS = str(self.population)
-                bestG = G_child
+            # starvation detection
+            healthy = False
+            # perform mutatation and crossover
+            slots_crossed, healthy = self.Crossover()
+            # snapshot G
+            self.snapshot()
+            if(not healthy):
+                # mutate crossed timeslots, since crossover failed
+                for slot in slots_crossed:
+                    slot_health = self.Mutation(slot)
+                    if(slot_health):    
+                        # snapshot G
+                        self.snapshot()
+                    # healthy if any mutation is successfull
+                    healthy = healthy or slot_health
+            # snapshot G
+            self.snapshot()
             iterations += 1
-        return (bestS, bestG, iterations,)
-        
-        # print("Mutant: ",self.population[Time_n], G_child)
-        # print('Mutant: \n', self.population)
-
-        return (str(self.population), G_child, 1)
+            # break loop on starvation
+            if (not healthy):
+                # randomize population
+                self.population.randomize()
+                # reset histories
+                self._resetHistory()
+        return (self.bestS, self.bestG, iterations,)
 
 # %% [markdown]
 # ### Test on pre-defined test cases
@@ -1027,6 +1089,7 @@ bestS, bestG, iterations = ga.Evolution()
 
 print("Schedule:\n", bestS)
 print("\nG:", bestG)
+print("normal G:", (bestG/Schedule.expectedG(context, distance.average())))
 print("Iterations:", iterations)
 
 # %% [markdown]
