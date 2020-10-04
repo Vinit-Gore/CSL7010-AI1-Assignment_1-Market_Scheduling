@@ -953,54 +953,57 @@ class GA:
         a, b = cells[:2]
         GA._randomPointCrossCells(context, a, b)
 
-    def Crossover(self) -> int:
-         #select timeslot with min G
-        t, t1 =0, 0
-        mintimeG = self.population[t1].G
-        for timeslot in self.population:
-            t = t+1
-            if (timeslot.G < mintimeG):
-                mintimeG = timeslot.G
-                t1 = t
-        t2 = random.choice(range(self.population.context.T))
-        while t1 is t2:
-            t2 = random.choice(range(self.population.context.T))
+    def Crossover(self): 
+
+         #select timeslot with min D
+        if (self.context.T<2):
+            return (self.population[0], self.population[1])
+        else:
+            times = sorted (self.population , key=lambda timeslot: timeslot.D)
+            t1 , t2 = times[0], times[1]
         
-        #initiating market indexes to be used for crossover
-        m_idx=[0,0]  
-        
-        #for each timeslot of the two
-        for count in range(2):
-            #initiating combined S value with max value i.e. K
-            S_combined_min = self.population.context.K * ( self.population.context.K + 1)
-            #loop over  the markets of current timeslot
-            for i in range(self.population.context.M):
-                
-                #S_combined value of the cells in the timeslot
-                S_combined = self.population[t1][i].G
-                if S_combined < S_combined_min:
-                    S_combined_min = S_combined
-                    m_idx[count] = i
-        return t1          
-        
+        cell_id1 = t1.cells.index(min(t1.cells, key = lambda cell : cell.G))
+        cell_id2 = t2.cells.index(min(t2.cells, key = lambda cell : cell.G))
+
         #swap cells
-        temp = self.population[t1][m_idx[0]]
-        self.population[t1][m_idx[0]] = self.population[t2][m_idx[1]]
-        self.population[t2][m_idx[1]] = temp
+        temp = t1[cell_id1]
+        t1[cell_id1] = t2[cell_id2]
+        t2[cell_id2] = temp
+
+        return t1, t2
+        
         
     def Evolution(self) -> Tuple[str, float, int]:
     # create schedule object
-    
-        #Crossover
-        Time_n = self.Crossover()
+        bestG = -1
+        bestS = None
+        iterations = 0
+        from timeit import default_timer as timer
+        # run for 2 sec
+        start = timer()
+        while (timer() - start < 2):
+            if self.context.T > 1 :
+                #Crossover
+                Time_1, Time_2 = self.Crossover()
 
-        #Offspring after mutation
-        self.Mutation(self.context, self.population[Time_n])
-        G_child = self.population.G
+                #Offspring after mutation
+                self.Mutation(self.context, Time_1)
+                self.Mutation(self.context, Time_2)
+
+            else:
+                self.Mutation(self.context, self.population[0])
+
+            G_child = self.population.G
     
+            if(G_child > bestG):
+                bestS = str(self.population)
+                bestG = G_child
+            iterations += 1
+        return (bestS, bestG, iterations,)
+        
         # print("Mutant: ",self.population[Time_n], G_child)
         # print('Mutant: \n', self.population)
-        
+
         return (str(self.population), G_child, 1)
 
 # %% [markdown]
