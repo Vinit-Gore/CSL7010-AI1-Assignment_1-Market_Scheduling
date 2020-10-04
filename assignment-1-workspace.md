@@ -946,49 +946,49 @@ import random
 
 class GA:
     def __init__(self, context: Context, distance: SymmetricMatrix):
+        self.context = context
+        self.distance = distance
         # create schedule object
         self.population = Schedule(context, distance)
         self.population.randomize()
     
-    def Mutation(self, timeslot: Schedule.Timeslot):
-        
-        mincellG = timeslot[0].G
-        mother_index = 0
-        for cell in timeslot:
-            if cell.G < mincellG:
-                mother_index = timeslot.index(cell)
-
-        father_index = random.choice([random.choice(range(mother_index)), random.choice(mother_index+1, len(timeslot))])
-        
-        #random cell for mutation    
-        motherCell: Schedule.Cell = timeslot[mother_index]
-        fatherCell: Schedule.Cell = timeslot[father_index]    
-        
-        mother_min, father_min = 1, 1
-        mother_k, father_k = 0,0  #just in case S is 1 for all shop pairs
-        
-        for i in range(len(motherCell.shops)):
-            for j in range(i+1, len(motherCell.shops)):
-                S_mother = 1 - self.population.distances[motherCell[i]-1, motherCell[j]-1]
-                S_father = 1 - self.population.distances[fatherCell[i]-1, fatherCell[j]-1]
-                
-                if S_mother < mother_min:
-                    mother_k = random.choice([i,j]) #select either element of lowest G pair
-                    #mother_gene = timeslot[mother_index][mother_k]  
-                    mother_min = S_mother
-                    
-                if S_father < father_min:
-                    father_k = random.choice([i,j])
-                    #father_gene = timeslot[father_index][father_k]
-                    father_min = S_father
-                    
-        #swap shops
-        temp = timeslot[mother_index][mother_k]
-        timeslot[mother_index][mother_k] = timeslot[father_index][father_k]
-        timeslot[father_index][father_k] = temp
-        
-        #print (mother_index, mother_k, mother_gene, end='\n')
-        #print (father_index, father_k, father_gene, end='\n')
+    # takes two cells and performs one point crossover b/w them round the given pivot
+    @staticmethod
+    def _pivotCrossCells(context: Context, cell_a: Schedule.Cell, cell_b: Schedule.Cell, pivot: int):
+        # return if not enough shops of invalid pivot
+        if(context.K < 2 or pivot < 0 or pivot >= context.K):
+            return
+        # cross swap first half and 2nd half
+        shops_a = cell_b.shops[pivot :] + cell_a.shops[: pivot]
+        shops_b = cell_a.shops[pivot :] + cell_b.shops[: pivot]
+        cell_a.shops = shops_a
+        cell_b.shops = shops_b
+        # invalidate cell cache since we directly modidied the shops
+        cell_a._invalidate_cache()
+        cell_b._invalidate_cache()
+    
+    # takes two cells and performs half point crossover b/w them
+    @staticmethod
+    def _halfPointCrossCells(context: Context, cell_a: Schedule.Cell, cell_b: Schedule.Cell):
+        GA._pivotCrossCells(context, cell_a, cell_b, context.K//2)
+    # takes two cells and performs one point random crossover b/w them
+    @staticmethod
+    def _randomPointCrossCells(context: Context, cell_a: Schedule.Cell, cell_b: Schedule.Cell):
+        if(context.K < 2):
+            return
+        GA._pivotCrossCells(context, cell_a, cell_b, random.randint(1, context.K-1))
+    
+    # Accepts a timeslot and performs mutation in an attempt to improve its G value.
+    @staticmethod
+    def Mutation(context: Context, timeslot: Schedule.Timeslot):
+        # return if not enough cells
+        if(context.M < 2):
+            return
+        # sort timeslot according to S values of cells
+        cells = sorted(timeslot.cells, key=lambda cell: cell.G)
+        # mutate b/w worst two cells
+        a, b = cells[:2]
+        GA._randomPointCrossCells(context, a, b)
 
     def Crossover(self) -> int:
          #select timeslot with min G
@@ -1032,7 +1032,7 @@ class GA:
         Time_n = self.Crossover()
 
         #Offspring after mutation
-        self.Mutation(self.population[Time_n])
+        self.Mutation(self.context, self.population[Time_n])
         G_child = self.population.G
     
         # print("Mutant: ",self.population[Time_n], G_child)
