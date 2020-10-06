@@ -1,0 +1,11 @@
+calculate G of timeslot--> s[0].G
+calculate G of cell   ---> s[0][0].G
+calculate D of timeslot--> s[0].D
+calculate D of cell    --> s[0][0].D
+
+expected G ----> .expectG(t,k,m)
+
+
+extract timeslot s[0]
+extract cell     s[0][0]
+extract shop     s[0][0][0]
