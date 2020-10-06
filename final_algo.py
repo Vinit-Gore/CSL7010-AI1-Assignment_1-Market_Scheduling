@@ -1,4 +1,3 @@
-# %%
 from dataclasses import dataclass, field
 # Context stores all the input data
 @dataclass(frozen=True)
@@ -9,22 +8,11 @@ class Context:
     C: float
     N: int = field(init=False)
     def __post_init__(self):
-        # set immutable value of N
-        # workaround https://stackoverflow.com/questions/53756788/how-to-set-the-value-of-dataclass-field-in-post-init-when-frozen-true
         object.__setattr__(self, 'N', self.K * self.T * self.M)
 
 
-# %% [markdown] id="JEmb8TMNTaLC"
-# ## SymmetricMatrix
-# A class to efficiently store symmetric matrices.
-#
-# `m[1,2]` = element at `row=1` and `col=2`.
-
-# %% executionInfo={"elapsed": 963, "status": "ok", "timestamp": 1601112486132, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="_7A0V0b8Trji"
-# Typings
 from typing import Tuple
-# Distance matrix data structure
-# A symmetric square matrix of size NxN
+
 class SymmetricMatrix:
     def __init__(self, size: int):
         # allocate space for lower half
@@ -69,19 +57,12 @@ class SymmetricMatrix:
     def average(self) -> float:
         return self.sum() / self.size**2
 
-
-# %% [markdown] id="QQpF5DOj3Pc8"
-# ## Schedule
-# A class that represents a schedule as a table with `T` rows and `m` columns with each cell containing `k` elements.
-
-# %%
 from typing import List, Callable, Tuple
 import random
 class Schedule:
     # Represents a single cell
     class Cell:
-        # a func. that takes the cell instance and two int, shop removed and shop added.
-        # if both ints are None this means that everything changed and all cache needs to be invalidated.
+       
         CelllUpdateListener = Callable[['Schedule.Cell', int, int], None]
         def __init__(self, context: Context, distances: SymmetricMatrix):
             self.context = context
@@ -333,14 +314,6 @@ class Schedule:
             ]
         )
 
-# %% [markdown] id="mB6LJff2gzIZ"
-# # Utility functions
-# ## input_context()
-# Inputs data from the user and return a `Context` object.
-# ## input_distances(context)
-# Takes a `Context` object, then inputs the distance matrix from the user and returns the `SymmetricMatrix` object of the distance matrix.
-
-# %% executionInfo={"elapsed": 8147, "status": "ok", "timestamp": 1601111600272, "user": {"displayName": "Jaideep Singh Heer (M20CS056)", "photoUrl": "", "userId": "05136112523110687861"}, "user_tz": -330} id="37hNO4nEhLk1"
 def input_context() -> Context:
     K, M, T = [int(x) for x in [input(),input(),input()]]
     C = float(input())
@@ -509,8 +482,7 @@ class GA:
                 # reset histories
                 self._resetHistory()
         return (self.bestS, self.bestG, iterations,)
-
-# Take input
+    
 context = input_context()
 distance = input_distances(context)
 
