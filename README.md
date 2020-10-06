@@ -15,3 +15,6 @@ Note: vscode wil automatically generate the jupyter notebook.
 # Read latest notebook
 
 You can find a `.md` copy of the latest notebook in the [`assignment-1-workspace.md`](./assignment-1-workspace.md) file.
+
+
+> Built for [this question](https://www.hackerrank.com/contests/csl7010-assignment-1/challenges/automated-market-opening-scheduler-during-covid).
